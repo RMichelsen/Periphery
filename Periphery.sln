@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.35906.104
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Periphery", "Periphery.vcxproj", "{03097F40-2263-453C-BC26-7F0EE3086BF3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{03097F40-2263-453C-BC26-7F0EE3086BF3}.Debug|x64.ActiveCfg = Debug|x64
+		{03097F40-2263-453C-BC26-7F0EE3086BF3}.Debug|x64.Build.0 = Debug|x64
+		{03097F40-2263-453C-BC26-7F0EE3086BF3}.Release|x64.ActiveCfg = Release|x64
+		{03097F40-2263-453C-BC26-7F0EE3086BF3}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {132BC59D-D106-48C2-B3D5-3D553F2372BF}
+	EndGlobalSection
+EndGlobal
