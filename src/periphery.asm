@@ -17,6 +17,7 @@ RED		EQU 2
 GREEN	EQU 3
 CYAN	EQU 4
 MAGENTA EQU 5
+ORANGE	EQU 6
 
 ; Tags
 EXTEND			EQU 0
@@ -30,6 +31,7 @@ COMPILE_FLOAT	EQU 7	; Green
 COMPILE_MACRO	EQU 8	; Cyan
 COMMENT			EQU	9	; White
 VARIABLE		EQU 10	; Magenta
+COMPILE_STRING	EQU 11	; Orange
 
 ; Registers
 ; RBX = Colour
@@ -59,6 +61,8 @@ istream QWORD 4096 DUP(0)
 current_inst QWORD istream
 CODESEG ENDS
 
+heap QWORD 4096 DUP(0) ; rdi
+
 file_handle QWORD -10
 pow10_lookup REAL8 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, 10000000.0, 100000000.0, 1000000000.0
 float_neg_mask QWORD 8000000000000000h
@@ -74,6 +78,7 @@ dispatch_table  QWORD _EXTEND
                 QWORD _COMPILE_MACRO
                 QWORD _COMMENT
                 QWORD _VARIABLE
+                QWORD _COMPILE_STRING
 
 .CODE
 parse PROC ; cl = delimiter
@@ -366,6 +371,8 @@ _tag:
 	je _compile
 	cmp rbx, CYAN
 	je _compile_macro
+	cmp rbx, ORANGE
+	je _compile_string
 	jmp _ret
 
 _define:
@@ -380,7 +387,9 @@ _compile:
 	jmp _ret
 _compile_macro:
 	or al, COMPILE_MACRO
-
+	jmp _ret
+_compile_string:
+	or al, COMPILE_STRING
 _ret:
 	ret
 convert_word ENDP
@@ -405,13 +414,13 @@ _INTERPRET:
 	je _GREEN
 	cmp byte ptr [rdx], '{'
 	je _CYAN
+	cmp byte ptr [rdx], '<'
+	je _ORANGE
 _TOKEN:
 	cmp byte ptr [rdx], '#'
 	je _INTEGER
 	cmp byte ptr [rdx], '$'
 	je _FLOAT
-	cmp byte ptr [rdx], '"'
-	je _STRING
 _WORD:
 	call convert_word
 	jmp _DISPATCH
@@ -424,12 +433,6 @@ _FLOAT:
 	dec rcx
 	inc rdx
 	call convert_float
-_STRING:
-	dec rcx
-	inc rdx
-	PUSH_ rdx
-	PUSH_ rcx
-	jmp _INTERPRET
 	
 _DISPATCH:
 	mov rcx, rax
@@ -451,12 +454,16 @@ _GREEN:
 _CYAN:
 	mov rbx, CYAN
 	jmp _INTERPRET
+_ORANGE:
+	mov rbx, ORANGE
+	jmp _INTERPRET
 
 .CODE
 main PROC
 	sub rsp, 8
 	mov rbx, YELLOW
 	lea rsi, [stack + 4096 * 8]
+	lea rdi, [heap]
 	jmp _INTERPRET
 main ENDP
 
@@ -530,6 +537,7 @@ _macro_search:
 
 _exec_macro:
 	mov rdx, rsi
+	mov r8, rdi
 	mov rax, [rcx + 8]
 	mov rcx, [rax]
 	mov rdi, [current_inst]
@@ -537,6 +545,7 @@ _exec_macro:
 	rep movsb
 	mov [current_inst], rdi
 	mov rsi, rdx
+	mov rdi, r8
 	jmp _INTERPRET
 
 _macro_not_found:
@@ -554,6 +563,7 @@ _word_search2:
 _compile_word_:
 	; mov rax, [ address of word ]
 	; call rax
+	mov r8, rdi
 	mov rax, [rcx + 8]
 	mov rdi, [current_inst]
 	mov byte ptr [rdi + 0], 048h
@@ -563,6 +573,7 @@ _compile_word_:
 	mov byte ptr [rdi + 11], 0D0h
 	add rdi, 12
 	mov [current_inst], rdi
+	mov rdi, r8
 	jmp _INTERPRET
 
 _word_not_found2:
@@ -581,6 +592,7 @@ _skip_neg2:
 _continue2:
 	; mov rax, imm64
 	; PUSH_ rax
+	mov r8, rdi
 	mov rdi, [current_inst]
 	mov byte ptr [rdi], 048h
 	mov byte ptr [rdi + 1], 0B8h
@@ -589,6 +601,7 @@ _continue2:
 	mov dword ptr [rdi + 14], 068948h
 	add rdi, 17
 	mov [current_inst], rdi
+	mov rdi, r8
 	jmp _INTERPRET
 
 _COMPILE_FLOAT:
@@ -596,6 +609,7 @@ _COMPILE_FLOAT:
 	shl rax, 4
 	; mov rax, imm64
 	; PUSH_ rax
+	mov r8, rdi
 	mov rdi, [current_inst]
 	mov byte ptr [rdi], 048h
 	mov byte ptr [rdi + 1], 0B8h
@@ -604,6 +618,7 @@ _COMPILE_FLOAT:
 	mov dword ptr [rdi + 14], 068948h
 	add rdi, 17
 	mov [current_inst], rdi
+	mov rdi, r8
 	jmp _INTERPRET
 
 _COMPILE_MACRO:
@@ -629,6 +644,25 @@ _macro_not_found2:
 _COMMENT:
 	jmp _INTERPRET
 _VARIABLE:
+	jmp _INTERPRET
+
+_COMPILE_STRING:
+	mov cl, 56
+_next_char:
+	mov rdx, rax
+	shr rdx, cl
+	test dl, dl
+	jnz _copy_char
+	test cl, cl
+	jz _compile_string_done
+	sub cl, 8
+	jmp _next_char
+_copy_char:
+	mov byte ptr [rdi], dl
+	inc rdi
+	sub cl, 8
+	jmp _next_char
+_compile_string_done:
 	jmp _INTERPRET
 
 _SEMICOLON:
