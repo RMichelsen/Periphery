@@ -1,0 +1,2 @@
+extern puts(i8*)
+
