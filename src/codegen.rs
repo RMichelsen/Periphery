@@ -152,6 +152,9 @@ impl<'a> Emitter<'a> {
             AstKind::Bool { value } => {
                 self.ast[index].ssa = AstValue::Bool(value);
             }
+            AstKind::Byte { value } => {
+                self.ast[index].ssa = AstValue::Byte(value);
+            }
             AstKind::String { value, cooked_len } => {
                 let id = self.add_string_literal(value, cooked_len);
                 let reg = self.next_reg();
@@ -360,9 +363,7 @@ impl<'a> Emitter<'a> {
                 fields,
                 field_count,
             } => {
-                if field_count == 0 {
-                    return;
-                }
+                if field_count == 0 { return; }
                 let mut field = fields;
                 let mut field_reg = u64::MAX;
                 let mut prev_field_reg = u64::MAX;
@@ -374,8 +375,7 @@ impl<'a> Emitter<'a> {
                             &mut self.code,
                             "%{} = insertvalue %{} undef, {} {}, {}",
                             field_reg, name, self.ast[field].ty, self.ast[field].ssa, i
-                        )
-                        .unwrap();
+                        ).unwrap();
                     } else {
                         writeln!(
                             &mut self.code,
@@ -386,10 +386,8 @@ impl<'a> Emitter<'a> {
                             self.ast[field].ty,
                             self.ast[field].ssa,
                             i
-                        )
-                        .unwrap();
+                        ).unwrap();
                     }
-
                     if i < field_count - 1 {
                         field = self.ast[field].next;
                         prev_field_reg = field_reg;
@@ -469,16 +467,35 @@ impl<'a> Emitter<'a> {
                     arg = self.ast[arg].next;
                 }
 
-                let reg = self.next_reg();
-
-                // Extern calls use raw symbol name (no monomorphization suffixes)
                 let is_extern = self.extern_fns.contains_key(name);
-                write!(
-                    &mut self.code,
-                    "%{} = call {} @{}",
-                    reg, self.ast[index].ty, name
-                )
-                .unwrap();
+                
+                // For extern calls, alloca pointers and rewrite SSA of pointer arguments
+                if is_extern {
+                    if let Some(ext) = self.extern_fns.get(name) {
+                        arg = args;
+                        for i in 0..arg_count {
+                            if let AstType::Ptr(_) = ext.param_types[i] {
+                                let ptr_reg = self.next_reg();
+                                let arg_ty = self.ast[arg].ty;
+                                writeln!(&mut self.code, "%{} = alloca {}", ptr_reg, arg_ty).unwrap();
+                                match self.ast[arg].ssa {
+                                    AstValue::Register(val_reg) => {
+                                        writeln!(&mut self.code, "store {} %{}, {}* %{}", arg_ty, val_reg, arg_ty, ptr_reg).unwrap();
+                                    }
+                                    val => {
+                                        writeln!(&mut self.code, "store {} {}, {}* %{}", arg_ty, val, arg_ty, ptr_reg).unwrap();
+                                    }
+                                }
+                                self.ast[arg].ssa = AstValue::Register(ptr_reg);
+                            }
+                            arg = self.ast[arg].next;
+                        }
+                    }
+                }
+
+                let reg = self.next_reg();
+                write!(&mut self.code, "%{} = call {} @{}", reg, self.ast[index].ty, name).unwrap();
+                
                 if !is_extern {
                     arg = args;
                     for _ in 0..arg_count {
@@ -489,16 +506,32 @@ impl<'a> Emitter<'a> {
 
                 write!(&mut self.code, "(").unwrap();
                 arg = args;
-                for i in 0..arg_count {
-                    write!(
-                        &mut self.code,
-                        "{} {}{}",
-                        self.ast[arg].ty,
-                        self.ast[arg].ssa,
-                        if i + 1 < arg_count { ", " } else { "" }
-                    )
-                    .unwrap();
-                    arg = self.ast[arg].next;
+                
+                if is_extern {
+                    if let Some(ext) = self.extern_fns.get(name) {
+                        for i in 0..arg_count {
+                            write!(
+                                &mut self.code,
+                                "{} {}{}",
+                                ext.param_types[i],
+                                self.ast[arg].ssa,
+                                if i + 1 < arg_count { ", " } else { "" }
+                            ).unwrap();
+                            arg = self.ast[arg].next;
+                        }
+                    }
+                } else {
+                    for i in 0..arg_count {
+                        write!(
+                            &mut self.code,
+                            "{} {}{}",
+                            self.ast[arg].ty,
+                            self.ast[arg].ssa,
+                            if i + 1 < arg_count { ", " } else { "" }
+                        )
+                        .unwrap();
+                        arg = self.ast[arg].next;
+                    }
                 }
                 writeln!(&mut self.code, ")").unwrap();
                 self.ast[index].ssa = AstValue::Register(reg);

@@ -8,7 +8,7 @@ fn compile(source: &str) -> String {
     let tokens = lexer::tokenize(source);
     let (ast, struct_decls, fn_decls, extern_fns) = parser::parse(&tokens);
     let (typed_ast, fn_instances) = typer::infer_types(ast, &struct_decls, &fn_decls, &extern_fns);
-    // debug::print_ast(&typed_ast, 0, &fn_instances);
+    debug::print_ast(&typed_ast, 0, &fn_instances);
     let code = codegen::emit(
         typed_ast,
         fn_instances,
@@ -23,14 +23,13 @@ fn main() {
     println!(
         "{}",
         compile(
-            "struct Point { x: float, y: int } struct Shape { points: Point[3], radius: float } let main { let s = Shape { points: [ Point { x: 1.0, y: 3 }, Point { x: 5.0, y: 7 }, Point { x: 2.0, y: 3 } ], radius: 5.0 } s.points[1].y }"
+            "extern puts(*byte) -> int let main { let a = [97b, 98b, 99b, 0b] puts(a) }"
         )
     );
 }
 
 // TODO:
 // - Implement modulo operator
-// - Implement numeric literal polymorphism, e.g. x + 1 works if 'x' is a float or int
 // - Investigate tail recursion
 
 #[cfg(test)]

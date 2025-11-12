@@ -110,6 +110,7 @@ pub enum AstKind<'a> {
     Integer { value: i64 },
     Float { value: f64 },
     Bool { value: bool },
+    Byte { value: u8 },
     String { value: &'a str, cooked_len: usize },
     Void {},
     Unary { op: TokenKind, expr: usize },
@@ -132,6 +133,7 @@ pub enum AstValue {
     Int(i64),
     Float(f64),
     Bool(bool),
+    Byte(u8),
     Register(u64),
     Void,
 }
@@ -142,6 +144,7 @@ impl fmt::Display for AstValue {
             AstValue::Int(value) => write!(fmt, "{}", value),
             AstValue::Float(value) => write!(fmt, "{:?}", value),
             AstValue::Bool(value) => write!(fmt, "{}", value),
+            AstValue::Byte(value) => write!(fmt, "{}", value),
             AstValue::Register(reg) => write!(fmt, "%{}", reg),
             AstValue::Void => write!(fmt, "void"),
         }
@@ -589,6 +592,12 @@ impl<'a> Parser<'a> {
             let value = self.current().lexeme;
             self.index += 1;
             self.push_kind(line, col, AstKind::Float { value: value.parse().unwrap() })
+        }
+        else if self.peek(TokenKind::Byte) {
+            let (line, col) = self.pos();
+            let value = self.current().lexeme;
+            self.index += 1;
+            self.push_kind(line, col, AstKind::Byte { value: value[..value.len() - 1].parse().unwrap() })
         }
         else if self.peek(TokenKind::String) {
             let (line, col) = self.pos();

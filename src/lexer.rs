@@ -3,6 +3,7 @@ pub enum TokenKind {
     Identifier,
     Integer,
     Float,
+    Byte,
     String,
     Plus,
     Minus,
@@ -153,10 +154,16 @@ pub fn tokenize(source: &str) -> Vec<Token<'_>> {
                 }
                 make_token!(TokenKind::Float);
                 continue;
-            } else {
-                make_token!(TokenKind::Integer);
+            } 
+
+            if bytes[pos] == b'b' {
+                advance!(1);
+                make_token!(TokenKind::Byte);
                 continue;
             }
+
+            make_token!(TokenKind::Integer);
+            continue;
         }
 
         if bytes[pos] == b'"' {

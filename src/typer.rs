@@ -46,6 +46,9 @@ impl<'a> Typer<'a> {
             AstKind::Bool { value } => {
                 self.push_copy(line, col, AstKind::Bool { value })
             }
+            AstKind::Byte { value } => {
+                self.push_copy(line, col, AstKind::Byte { value })
+            }
             AstKind::String { value, cooked_len } => {
                 self.push_copy(line, col, AstKind::String { value, cooked_len })
             }
@@ -191,6 +194,9 @@ impl<'a> Typer<'a> {
             }
             AstKind::Bool { .. } => {
                 self.ast[index].ty = AstType::Bool;
+            }
+            AstKind::Byte { .. } => {
+                self.ast[index].ty = AstType::Byte;
             }
             AstKind::String { cooked_len, .. } => {
                 let mut dims = [usize::MAX; 8];

@@ -49,6 +49,7 @@ fn print_ast_inner<'a>(ast: &[AstNode<'a>], root: usize) {
             AstKind::Integer { value } => println!("{}Integer value={} type={} @{}:{}", pad, value, ty_s, node.line, node.column),
             AstKind::Float { value }   => println!("{}Float value={} type={} @{}:{}", pad, value, ty_s, node.line, node.column),
             AstKind::Bool { value }    => println!("{}Bool value={} type={} @{}:{}", pad, value, ty_s, node.line, node.column),
+            AstKind::Byte { value }    => println!("{}Byte value={} type={} @{}:{}", pad, value, ty_s, node.line, node.column),
             AstKind::String { value, cooked_len }  => println!("{}String \"{}\" len={} type={} @{}:{}", pad, value, cooked_len, ty_s, node.line, node.column),
             AstKind::Void {}           => println!("{}Void type={} @{}:{}", pad, ty_s, node.line, node.column),
             AstKind::Name { name }     => println!("{}Name {} type={} @{}:{}", pad, name, ty_s, node.line, node.column),
